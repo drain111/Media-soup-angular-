@@ -1,0 +1,27 @@
+{
+  "name": "mediasoupangular",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run start -w client",
+    "test": "npm run test -w server",
+    "lint": "npm run lint -w client && npm run lint -w server",
+    "compose:up": "podman compose up -d",
+    "compose:down": "podman compose down"
+  },
+  "dependencies": {
+    "esbuild": "^0.28.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "esbuild@0.21.5": true,
+    "msgpackr-extract@3.0.4": true,
+    "lmdb@3.5.6": true,
+    "mediasoup@3.27.1": true,
+    "@parcel/watcher@2.6.0": true
+  }
+}
