@@ -1,0 +1,62 @@
+:host {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #1e293b 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+main {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.content {
+  max-width: 560px;
+  margin: 48px auto;
+  text-align: center;
+  padding: 24px;
+}
+
+h1 {
+  color: #f8fafc;
+  font-size: 2rem;
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  color: #cbd5e1;
+  line-height: 1.7;
+  font-size: 1.05rem;
+}
+
+.subtitle strong {
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+.cta-btn {
+  margin-top: 32px;
+  padding: 14px 36px;
+  font-size: 1rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  background: #3b82f6;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.cta-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.cta-btn:active {
+  transform: translateY(0);
+  background: #1d4ed8;
+}

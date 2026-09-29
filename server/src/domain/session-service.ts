@@ -42,10 +42,16 @@ export class SessionService {
         await this.store.create(code, hostEmail, normalizedInvites);
         // Set expiry in store (infrastructure handles TTL)
         return { code };
-      } catch (err: any) {
-        if (err?.code === 'EEXIST' || maxRetries === 0) {
-          throw new Error('Failed to generate unique room code');
-        }
+      } catch (err: unknown) {
+        const isEExist =
+        typeof err === 'object' &&
+        err !== null &&
+        'code' in err &&
+        (err as { code?: string }).code === 'EEXIST';
+
+      if (isEExist || maxRetries === 0) {
+        throw new Error('Failed to generate unique room code');
+      }
         code = this.generateUniqueCode();
       }
     }

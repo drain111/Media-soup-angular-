@@ -8,6 +8,15 @@
   "scripts": {
     "dev:server": "npm run dev -w server",
     "dev:client": "npm run start -w client",
+    "dev": "concurrently -k -n \"CLIENT,SERVER\" -c \"blue,green\" \"npm run dev:client\" \"npm run dev:server\"",
+    "// BUILD COMMANDS": "----------------------------------------------",
+    "build:client": "npm --prefix client run build",
+    "build:server": "npm --prefix server run build",
+    "build": "npm run build:client && npm run build:server",
+    "// PRODUCTION START COMMANDS": "-----------------------------------",
+    "start:client": "node client/dist/client/server/server.mjs",
+    "start:server": "npm --prefix server run start",
+    "start": "concurrently -k -n \"ANGULAR_SSR,API_SERVER\" -c \"cyan,magenta\" \"npm run start:client\" \"npm run start:server\"",
     "test": "npm run test -w server",
     "lint": "npm run lint -w client && npm run lint -w server",
     "compose:up": "podman compose up -d",
@@ -23,5 +32,8 @@
     "lmdb@3.5.6": true,
     "mediasoup@3.27.1": true,
     "@parcel/watcher@2.6.0": true
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
   }
 }

@@ -1,0 +1,206 @@
+openapi: 3.0.3
+info:
+  title: mediasoupangular API
+  description: >
+    Routes for the mediasoup voice chat app.
+    REST endpoints are served by the Express server on :3001.
+    Realtime signalling after you create/join a room uses the Socket.IO
+    connection at /ws.
+  version: 0.1.0
+servers:
+  - url: http://localhost:3001
+    description: Local dev server
+
+paths:
+  /api/auth/google/login-url:
+    get:
+      tags: [Auth]
+      summary: Get the Google OAuth login URL
+      description: >
+        Returns the Google consent screen URL you should redirect to.
+        The redirect comes back to /api/auth/google/callback with ?code.
+      operationId: getGoogleLoginUrl
+      responses:
+        '200':
+          description: The URL to open for Google sign-in
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url]
+                properties:
+                  url:
+                    type: string
+                    description: Full Google OAuth consent screen URL
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/auth/google/callback:
+    get:
+      tags: [Auth]
+      summary: Google OAuth redirect target
+      description: >
+        Handles ?code from Google, exchanges it for tokens, sets the
+        session cookie, then redirects to /user-page.
+      operationId: googleCallback
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema: { type: string }
+          description: Authorization code from Google
+        - name: state
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        '302':
+          description: Redirect to /user-page after the cookie is set
+          headers:
+            Location:
+              schema: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /user-page:
+    get:
+      tags: [User]
+      summary: Logged-in user page
+      description: >
+        Only available with a valid session cookie. Returns the user's
+        profile (email, name, picture).
+      operationId: getUserPage
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: The logged-in user's profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /rooms/{code}:
+    post:
+      tags: [Rooms]
+      summary: Create a room or join an existing one
+      description: >
+        Looks up the session by `code`. If it doesn't exist, creates the 
+        room and adds you as host (admin). If it already exists, joins 
+        you as a participant. Your role is determined from your Google 
+        auth email — only the first call for a given code becomes host.
+
+        After joining or creating, use the Socket.IO connection at 
+        `/ws` for mediasoup signalling within this room.
+      operationId: createOrJoinRoom
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, example: A1B2C3 }
+          description: >
+            6-character room code. If no session with this code exists on 
+            the server, a new one is created here.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoomRequest' }
+      responses:
+        '201':
+          description: Room was created; you are host
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomResponse' }
+        '200':
+          description: Room already existed; you joined as a participant
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RoomResponse' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Missing or invalid session
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  schemas:
+    User:
+      type: object
+      required: [email, name]
+      properties:
+        email:   { type: string, format: email }
+        name:    { type: string }
+        picture:
+          type: string
+          format: uri
+          description: Google profile picture URL
+
+    RoomRequest:
+      type: object
+      required: [displayName]
+      properties:
+        displayName:
+          type: string
+          description: Name to display in the room
+        inviteEmails:
+          type: array
+          items: { type: string, format: email }
+          description: >
+            Host may send invites during creation. Ignored when 
+            joining an existing session.
+
+    RoomResponse:
+      allOf:
+        - $ref: '#/components/schemas/RoomCode'
+        - type: object
+          properties:
+            isHost:
+              type: boolean
+              description: Whether you are the room host (true = created)
+            expiresAt:
+              type: integer
+              description: Room expiry as epoch seconds
+            invites:
+              type: array
+              items: { type: string, format: email }
+
+    RoomCode:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          minLength: 6
+          maxLength: 6
+          example: A1B2C3
+          description: 6-character room code
+
+    ErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }

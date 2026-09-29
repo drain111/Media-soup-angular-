@@ -8,7 +8,7 @@ export class ChatService {
     // Implementation deferred to infrastructure layer (Redis list with LTRIM)
   }
 
-  async getHistory(code: string): Promise<{ from: string; text: string; ts: number }[]> {
-    return [];
+  getHistory(code: string): Promise<{ from: string; text: string; ts: number }[]> {
+    return Promise.resolve([]);
   }
 }
