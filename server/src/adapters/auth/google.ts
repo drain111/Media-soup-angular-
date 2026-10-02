@@ -14,7 +14,6 @@ export class GoogleAuthProvider implements AuthProvider {
   constructor(private cfg: { clientId: string; clientSecret: string; redirectUri: string }) {}
 
   private getDiscovery(): Promise<endPoint> {
-    // cached: you were fetching this on every login before
     this.discovery ??= fetch('https://accounts.google.com/.well-known/openid-configuration')
       .then(async r => {
         if (!r.ok) throw new Error('Discovery failed');
@@ -24,7 +23,7 @@ export class GoogleAuthProvider implements AuthProvider {
   }
 
   async getLoginUrl(state: string) {
-    const authorization_endpoint = await this.getDiscovery();
+    const { authorization_endpoint } = await this.getDiscovery();
     const params = new URLSearchParams({
       client_id: this.cfg.clientId,
       redirect_uri: this.cfg.redirectUri,

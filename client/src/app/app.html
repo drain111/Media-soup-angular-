@@ -3,9 +3,15 @@
     <h1>🎥 MediaSource VideoChat</h1>
 
     <p class="subtitle">
-      This is a real-time videochat app using MediaSource — right now, log in with Google to create a room and invite participants by their google emails. Everyone joins by authenticating with Google, and each session auto-expires after <strong>1 hour</strong>. The session begins he moment the user creates the room with the emails.
+      This is a real-time videochat app using MediaSource — right now, log in with any available provider to create a room and invite participants by their emails. Everyone joins by authenticating, and each session auto-expires after <strong>1 hour</strong>. The session begins the moment the user creates the room with the emails.
     </p>
 
-    <button (click)="loginToGoogle()" class="cta-btn">Login to the default email provider</button>
+    <div class="login-buttons">
+      @for (provider of providers(); track provider.id) {
+        <button (click)="login(provider.id)" [attr.data-provider]="provider.id" class="cta-btn btn-{{provider.id}}">
+          Login with {{ provider.label | titlecase }}
+        </button>
+      }
+    </div>
   </div>
 </main>

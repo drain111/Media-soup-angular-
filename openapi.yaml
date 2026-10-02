@@ -61,7 +61,19 @@ paths:
               schema: { type: string }
         '400':
           $ref: '#/components/responses/BadRequest'
-
+  /api/auth/logout:
+    get:
+      tags: [Auth]
+      summary: Logout of the service
+      description: >
+        Delete's the cookie and logs out the user of the platform. Just in case you want to change emails to another provider I guess?
+      operationId: logOut
+      responses:
+        '204':
+          description: Cookie unset, no content after this sent
+          headers:
+            Location:
+              schema: { type: string }
   /user-page:
     get:
       tags: [User]
