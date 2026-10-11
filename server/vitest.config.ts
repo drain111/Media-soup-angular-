@@ -1,10 +1,13 @@
-import { defineConfig } from "vitest/config";
+import swc from 'unplugin-swc';
+import tsconfigPaths from 'vite-tsconfig-paths';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // SWC emits decorator metadata (esbuild does not), which Nest's constructor injection needs.
+  plugins: [swc.vite({ module: { type: 'es6' } }), tsconfigPaths()],
   test: {
-    environment: "node",
-    include: ["test/**/*.test.ts"],
-    testTimeout: 15000,
-    hookTimeout: 15000,
+    globals: true,
+    root: './',
+    include: ['**/*.spec.ts'],
   },
 });
