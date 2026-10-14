@@ -5,8 +5,9 @@ export class GoogleAuthProvider implements AuthProvider {
   readonly id = 'google';
   private discovery?: Promise<DiscoveryEndpoint>;
 
-  constructor(private readonly cfg: { clientId: string; clientSecret: string; redirectUri: string }) {}
-
+constructor(private readonly cfg: { clientId: string; clientSecret: string; redirectUri: string }) {
+  void this.getDiscovery().catch(() => {}); // si falla, la caché se limpia y se reintenta en el primer login
+}
   private getDiscovery(): Promise<DiscoveryEndpoint> {
     this.discovery ??= fetch('https://accounts.google.com/.well-known/openid-configuration')
       .then(async (r) => {

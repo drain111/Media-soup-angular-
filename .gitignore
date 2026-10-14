@@ -3,3 +3,4 @@ dist/
 .env
 *.log
 .angular/
+.kilo/plans/1791826522366-logged-in-page.md

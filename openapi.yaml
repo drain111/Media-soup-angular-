@@ -12,17 +12,40 @@ servers:
     description: Local dev server
 
 paths:
-  /api/auth/google/login-url:
+  /api/auth/providers:
     get:
       tags: [Auth]
-      summary: Get the Google OAuth login URL
-      description: >
-        Returns the Google consent screen URL you should redirect to.
-        The redirect comes back to /api/auth/google/callback with ?code.
-      operationId: getGoogleLoginUrl
+      summary: Get available OAuth providers
+      description: Returns the list of configured OAuth providers.
+      operationId: getProviders
       responses:
         '200':
-          description: The URL to open for Google sign-in
+          description: List of OAuth providers
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: string }
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/auth/{provider}/login-url:
+    parameters:
+      - name: provider
+        in: path
+        required: true
+        schema: { type: string }
+        description: OAuth provider ID (e.g. "google")
+    get:
+      tags: [Auth]
+      summary: Get the OAuth login URL for a provider
+      description: >
+        Returns the OAuth consent screen URL you should redirect to.
+        The redirect comes back to /api/auth/{provider}/callback with ?code.
+      operationId: getLoginUrl
+      responses:
+        '200':
+          description: The URL to open for OAuth sign-in
           content:
             application/json:
               schema:
@@ -31,49 +54,68 @@ paths:
                 properties:
                   url:
                     type: string
-                    description: Full Google OAuth consent screen URL
-        '500':
-          $ref: '#/components/responses/InternalError'
+                    description: Full OAuth consent screen URL
+        '404':
+          description: Unknown provider
 
-  /api/auth/google/callback:
+  /api/auth/{provider}/callback:
+    parameters:
+      - name: provider
+        in: path
+        required: true
+        schema: { type: string }
+        description: OAuth provider ID (e.g. "google")
     get:
       tags: [Auth]
-      summary: Google OAuth redirect target
+      summary: OAuth redirect target
       description: >
-        Handles ?code from Google, exchanges it for tokens, sets the
-        session cookie, then redirects to /user-page.
-      operationId: googleCallback
+        Handles ?code from the provider, exchanges it for tokens, sets the
+        session cookie, then redirects to /.
+      operationId: oauthCallback
       parameters:
         - name: code
           in: query
           required: true
           schema: { type: string }
-          description: Authorization code from Google
+          description: Authorization code from the provider
         - name: state
           in: query
           required: false
           schema: { type: string }
       responses:
         '302':
-          description: Redirect to /user-page after the cookie is set
+          description: Redirect to / after the cookie is set
           headers:
             Location:
               schema: { type: string }
         '400':
           $ref: '#/components/responses/BadRequest'
-  /api/auth/logout:
+
+  /api/session:
     get:
-      tags: [Auth]
-      summary: Logout of the service
-      description: >
-        Delete's the cookie and logs out the user of the platform. Just in case you want to change emails to another provider I guess?
-      operationId: logOut
+      tags: [Session]
+      summary: Get current logged-in user
+      description: Returns the current session user profile. 401 when not logged in.
+      operationId: getCurrentSession
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: The current user's profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      tags: [Session]
+      summary: Log out the current session
+      description: Clears the session cookie and invalidates the login.
+      operationId: deleteCurrentSession
       responses:
         '204':
-          description: Cookie unset, no content after this sent
-          headers:
-            Location:
-              schema: { type: string }
+          description: Cookie cleared, no content returned
   /user-page:
     get:
       tags: [User]

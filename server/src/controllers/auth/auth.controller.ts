@@ -7,7 +7,8 @@ import { SESSION_COOKIE, SessionService } from '../../services/session.service.j
 
 const OAUTH_STATE_COOKIE = 'oauth_state';
 const OAUTH_STATE_PATH = '/api/auth'; // the callback lives under this path
-
+//helps test the response time of buttons and behaviour when loading, to prevent double clicks and make it seem fast
+//const sleep = (ms : number) => new Promise((resolve) => setTimeout(resolve, ms));
 function sameString(a: string, b: string): boolean {
   const x = Buffer.from(a);
   const y = Buffer.from(b);
@@ -45,6 +46,7 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
+
     const expected: unknown = req.cookies?.[OAUTH_STATE_COOKIE];
     res.clearCookie(OAUTH_STATE_COOKIE, { path: OAUTH_STATE_PATH });
     if (typeof expected !== 'string' || !sameString(expected, query.state)) {
@@ -61,10 +63,11 @@ export class AuthController {
   private async begin(providerId: string, res: Response): Promise<string> {
     const state = randomBytes(16).toString('hex');
     const url = await this.authService.getLoginUrl(providerId, state); // throws 404 for unknown providers
+
     res.cookie(OAUTH_STATE_COOKIE, state, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env['NODE_ENV'] === 'production',
+      secure: new URL(process.env['PUBLIC_URL']!).protocol === 'https:',
       maxAge: 10 * 60 * 1000,
       path: OAUTH_STATE_PATH,
     });
