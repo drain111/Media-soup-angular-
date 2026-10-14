@@ -4,6 +4,7 @@ import type { Request, Response } from 'express';
 import { CallbackQueryDto } from '../../dto/callback-query.dto.js';
 import { AuthService } from '../../services/auth.service.js';
 import { SESSION_COOKIE, SessionService } from '../../services/session.service.js';
+import { AuthOAuthException } from '../../errors/auth-oauth.exception.js';
 
 const OAUTH_STATE_COOKIE = 'oauth_state';
 const OAUTH_STATE_PATH = '/api/auth'; // the callback lives under this path
@@ -37,9 +38,8 @@ export class AuthController {
   async redirect(@Param('provider') providerId: string, @Res({ passthrough: true }) res: Response) {
     return { url: await this.begin(providerId, res), statusCode: HttpStatus.FOUND };
   }
-
-  @Get(':provider/callback')
   @Redirect('/', HttpStatus.FOUND)
+  @Get(':provider/callback')
   async callback(
     @Param('provider') providerId: string,
     @Query() query: CallbackQueryDto,
@@ -53,10 +53,15 @@ export class AuthController {
       throw new BadRequestException('Invalid login state');
     }
 
-    const user = await this.authService.handleCallback(providerId, query.code);
+    let user;
+    try {
+      user = await this.authService.handleCallback(providerId, query.code);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown authentication error';
+      throw new AuthOAuthException(message, providerId);
+    }
     const token = await this.sessionService.create(user);
     res.cookie(SESSION_COOKIE, token, this.sessionService.cookieOptions());
-    // @Redirect('/') sends the browser home
   }
 
   /** Generates the CSRF `state`, keeps it in a short-lived cookie and returns the provider URL. */

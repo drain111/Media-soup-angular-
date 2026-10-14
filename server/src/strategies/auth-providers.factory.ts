@@ -46,7 +46,7 @@ export function createAuthProviders(env: NodeJS.ProcessEnv = process.env): Reado
       if(fn) {
         fn(providers, env);
       } else {
-        throw `Unknown auth provider: ${provider}`;
+        throw new Error(`Unknown auth provider: ${provider}`);
       }
     });
   }

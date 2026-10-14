@@ -17,6 +17,7 @@ export class CustomAuthProvider implements AuthProvider {
 
   constructor(private readonly cfg: CustomAuthConfig) {
     if (!cfg.clientId || !cfg.clientSecret || !cfg.redirectUri || !cfg.issuer) {
+      //this one shouldn't happen, we did this check before, but just in case
       throw new Error('CustomAuthProvider: missing clientId, clientSecret, redirectUri, or issuer');
     }
   }
