@@ -13,5 +13,10 @@ export const API_ORIGIN = new InjectionToken<string>('API_ORIGIN', {
 
 export const apiOriginInterceptor: HttpInterceptorFn = (req, next) => {
   const origin = inject(API_ORIGIN);
-  return next(origin && req.url.startsWith('/api') ? req.clone({ url: origin + req.url }) : req);
+  if (origin && req.url.startsWith('/api')) {
+    return next(req.clone({
+      url: origin + req.url
+    }));
+  }
+  return next(req);
 };

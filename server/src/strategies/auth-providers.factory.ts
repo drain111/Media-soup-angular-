@@ -35,7 +35,7 @@ export function createAuthProviders(env: NodeJS.ProcessEnv = process.env): Reado
 
   const {AUTH_PROVIDERS} = env;
   
-  if (env['ALLOW_FAKE_AUTH'] !== 'production') {
+  if (process.env['NODE_ENV'] !== 'production') {
     providers.set('fake', new FakeAuthProvider());
   }
 

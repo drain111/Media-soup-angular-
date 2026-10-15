@@ -116,6 +116,26 @@ paths:
       responses:
         '204':
           description: Cookie cleared, no content returned
+  /auth/error:
+    get:
+      tags: [Client]
+      summary: OAuth authentication error page
+      description: >
+        Angular client-side route displayed when an OAuth login fails.
+        Rendered via SSR. Accepts `message` and `provider` query parameters
+        to display the error details.
+      parameters:
+        - name: message
+          in: query
+          required: false
+          schema: { type: string }
+          description: Human-readable error message from the OAuth provider
+        - name: provider
+          in: query
+          required: false
+          schema: { type: string }
+          description: OAuth provider ID that failed
+
   /user-page:
     get:
       tags: [User]

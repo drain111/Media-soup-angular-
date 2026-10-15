@@ -1,7 +1,4 @@
-import { Component, HostListener, Injectable, PLATFORM_ID, TransferState, inject, makeStateKey, signal } from '@angular/core';
-import { isPlatformBrowser, TitleCasePipe } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
-import { Observable, finalize, of, tap } from 'rxjs';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 

@@ -13,7 +13,9 @@
     "build:server": "npm run build -w server",
     "build": "npm run build:client && npm run build:server",
     "start": "npm run start -w server",
+    "start:prod-linux": " node -r dotenv/config server/dist/main.js dotenv_config_path=.env.production",
     "test": "npm run test -w server",
+    "start:prod-win": "$env:ALLOW_FAKE_AUTH='production';$env:NODE_ENV='production';$env:SESSION_SECRET='dev-only-secret-change-me-0123456789abcdef';$env:PUBLIC_URL='http://localhost:3001';$env:PORT='3001';node server/dist/main.js",
     "lint": "npm run lint -w client && npm run lint -w server",
     "compose:up": "podman compose up -d",
     "compose:down": "podman compose down"
