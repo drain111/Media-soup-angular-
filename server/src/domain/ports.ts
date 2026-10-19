@@ -24,12 +24,11 @@ export interface Clock {
 }
 
 export interface SessionStore {
-  create(code: string, hostEmail: string, inviteEmails: string[]): Promise<void>;
-  upsert(sessionId: string, data: { code: string; hostEmail: string; expiresAt: number }, invites: string[], ttlSeconds: number): Promise<void>;
-  get(code: string): Promise<{ sessionId: string; code: string; hostEmail: string; invites: Set<string>; expiresAt: number } | null>;
+  create(sessionId: string, data: { code: string; hostParticipantId: string; expiresAt: number; roomName: string }, invites: string[], ttlSeconds: number): Promise<void>;
+  get(code: string): Promise<{ sessionId: string; code: string; hostParticipantId: string; roomName: string; invites: Set<string>; expiresAt: number } | null> ;
   updateInvites(code: string, emails: string[]): Promise<number>;
   isMember(sessionId: string): Promise<boolean>;
-  hasInvite(email: string, code: string): Promise<boolean>;
+  hasInvite(participantId: string, code: string): Promise<boolean>;
   scheduleExpiry(code: string, ttlMs: number, callback: () => void): void;
 }
 

@@ -27,7 +27,8 @@
     "class-validator": "^0.15.1",
     "dotenv": "^18.0.7",
     "esbuild": "^0.28.2",
-    "express": "5.2.1"
+    "express": "5.2.1",
+    "ioredis": "^6.0.0"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,
@@ -38,6 +39,7 @@
     "@parcel/watcher@2.6.0": true
   },
   "devDependencies": {
-    "concurrently": "^10.0.5"
+    "concurrently": "^10.0.5",
+    "unplugin-swc": "^2.0.0"
   }
 }

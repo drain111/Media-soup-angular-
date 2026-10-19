@@ -23,7 +23,36 @@
 
     <div class="content">
       <h1>You are logged in</h1>
+
+      <button class="cta-btn btn-create-room" (click)="showCreateRoomModal = !showCreateRoomModal">Create Room</button>
     </div>
+
+    @if (showCreateRoomModal) {
+      <div id="createRoomModal" class="modal-overlay" (click)="onDocumentClick($event)">
+        <div class="modal" (click)="$event.stopPropagation()">
+          <div class="modal-header">
+            <h2>Create Room</h2>
+            <button class="modal-close" (click)="showCreateRoomModal = false">&times;</button>
+          </div>
+          <form class="create-room-form">
+            <div class="form-field">
+              <label for="room-name">Room name</label>
+              <input id="room-name" type="text" placeholder="My room" (input)="onRoomNameInput($event)" />
+            </div>
+            <div class="form-field">
+              <label for="room-emails">Emails to allow</label>
+              <textarea
+                id="room-emails"
+                placeholder="john@example.com, jane@example.com"
+                rows="4"
+                (input)="onRoomEmailsInput($event)"
+              ></textarea>
+            </div>
+            <button type="button" class="cta-btn btn-go" (click)="onGo()" [disabled]="!roomName().trim()">Go</button>
+          </form>
+        </div>
+      </div>
+    }
   </main>
 } @else {
   <main class="landing">

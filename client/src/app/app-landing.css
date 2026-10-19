@@ -151,3 +151,90 @@ h1 {
   transform: translateY(0);
   background: #1d4ed8;
 }
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.modal {
+  background: #1e293b;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modal-header h2 {
+  color: #f8fafc;
+  font-size: 1.4rem;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: #cbd5e1;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+}
+
+.modal-close:hover {
+  color: #f8fafc;
+}
+
+.create-room-form .form-field {
+  margin-bottom: 16px;
+}
+
+.create-room-form label {
+  display: block;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.create-room-form input,
+.create-room-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  color: #f8fafc;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.create-room-form input::placeholder,
+.create-room-form textarea::placeholder {
+  color: #94a3b8;
+}
+
+.create-room-form input:focus,
+.create-room-form textarea:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+}
+
+.btn-go {
+  width: 100%;
+  margin-top: 8px;
+}
