@@ -41,7 +41,17 @@ export class AuthProvidersService {
   }
 
 
-
+  authCheckPromise(): Promise<void> {
+    return new Promise((resolve) => {
+      this.http
+        .get<SessionUser>('/api/session')
+        .pipe(finalize(() => { this.loading.set(false); resolve(); }))
+        .subscribe({
+          next: (u) => this.user.set(u),
+          error: () => this.user.set(null),
+        });
+    });
+  }
   authCheck() {
     this.http
       .get<SessionUser>('/api/session')

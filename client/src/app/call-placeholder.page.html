@@ -1,0 +1,139 @@
+<main class="call-page">
+    @switch (accessState()) {
+        @case ('notLoggedIn') {
+        <div class="error-view">
+            <h1>Authentication Required</h1>
+            <p>You must be logged in to access this call room. Please log in with an account that has been invited.</p>
+            <a routerLink="/" class="btn-back">Go back to login</a>
+        </div>
+        }
+        @case ('roomNotFound') {
+        <div class="error-view">
+            <h1>Room Not Found</h1>
+            <p>This call room doesn't exist or has expired.</p>
+            <a routerLink="/" class="btn-back">Go back to login</a>
+        </div>
+        }
+        @case ('notInvited') {
+        <div class="error-view">
+            <h1>Not Invited</h1>
+            <p>You're not invited to this session. Please ask the host to invite your email address.</p>
+            <a routerLink="/" class="btn-back">Go back to login</a>
+        </div>
+        }
+        @case ('validating') {
+            @if (showSkeleton()) {
+                <div class="prep-container skeleton-container">
+                    <!-- Header skeleton -->
+                    <header class="skeleton-header">
+                        <span class="skeleton-line skeleton-title"></span>
+                        <span class="skeleton-line skeleton-subtitle"></span>
+                    </header>
+
+                    <div class="prep-grid skeleton-grid">
+                        <!-- Left panel skeleton -->
+                        <div class="device-panel skeleton-device-panel">
+                            @for (row of [1, 2, 3, 4]; track row) {
+                                <div class="device-row skeleton-device-row" [style.grid-template-columns]="row===4 ? '60px 1fr 70px' : '60px 1fr'">
+                                    <span class="skeleton-line skeleton-label"></span>
+                                    <span class="skeleton-line skeleton-select"></span>
+                                    @if (row===3) {<span class="skeleton-line skeleton-btn"></span>}
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Preview area skeleton -->
+                        <div class="preview-panel skeleton-preview">
+                            <svg viewBox="0 0 640 360" fill="none" xmlns="http://www.w3.org/2000/svg" class="skeleton-icon">
+                                <rect x="184" y="100" width="72" height="72" rx="36" fill="#3a3a5e"/>
+                                <rect x="136" y="200" width="168" height="60" rx="30" fill="#3a3a5e"/>
+                                <rect x="290" y="140" width="152" height="100" rx="12" fill="#3a3a5e"/>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- Bottom row skeleton -->
+                    <div class="name-row skeleton-bottom-row">
+                        <span class="skeleton-line skeleton-name"></span>
+                        <span class="skeleton-line skeleton-join"></span>
+                    </div>
+                </div>
+            }
+        }
+       @case ('allowed') {
+        <div class="prep-container">
+            <header class="prep-header">
+            <h1>{{ roomName() || 'Video Conference' }}</h1>
+            <p class="prep-subtitle">Check your devices and join the call</p>
+            </header>
+
+            <div class="prep-grid">
+            <!-- Left: device selectors -->
+            <div class="device-panel">
+                <div class="device-row">
+                <label for="camera-select">Camera</label>
+                <select id="camera-select" [value]="selectedCamera()" (change)="onCameraChange($event)">
+                    @if (!cameras().length) { <option>Loading devices...</option> }
+                    @for (cam of cameras(); track cam.deviceId) {
+                    <option [value]="cam.deviceId">{{ cam.label || 'Camera ' + (cameras().indexOf(cam) + 1) }}</option>
+                    }
+                </select>
+                </div>
+
+                <div class="device-row">
+                <label for="mic-select">Microphone</label>
+                <select id="mic-select" [value]="selectedMic()" (change)="onMicChange($event)">
+                    @if (!mics().length) { <option>Loading devices...</option> }
+                    @for (mic of mics(); track mic.deviceId) {
+                    <option [value]="mic.deviceId">{{ mic.label || 'Microphone ' + (mics().indexOf(mic) + 1) }}</option>
+                    }
+                </select>
+                </div>
+
+                <div class="device-row">
+                <label for="speaker-select">Speaker</label>
+                <select id="speaker-select" [value]="selectedSpeaker()" (change)="onSpeakerChange($event)">
+                    @if (!speakers().length) { <option>No speakers detected</option> }
+                    @for (sp of speakers(); track sp.deviceId) {
+                    <option [value]="sp.deviceId">{{ sp.label || 'Speaker ' + (speakers().indexOf(sp) + 1) }}</option>
+                    }
+                </select>
+                <button class="btn-test" (click)="testSpeaker()" [disabled]="!speakers().length">Test</button>
+                </div>
+
+                <div class="device-row mic-volume-row">
+                <label>Mic Vol</label>
+                <div class="volume-meter">
+                    <div class="volume-bar" [style.width.%]="micVolumePercent()"></div>
+                </div>
+                </div>
+            </div>
+
+            <!-- Center: video preview -->
+            <div class="preview-panel">
+                <video #previewVideo autoplay playsinline muted class="preview-video"></video>
+            </div>
+            </div>
+
+            <!-- Bottom: name + join -->
+            <div class="name-row">
+            <input
+                type="text"
+                placeholder="Your display name"
+                [value]="displayName()"
+                (input)="onDisplayNameInput($event)"
+            />
+            <button class="btn-join" (click)="onJoin()" [disabled]="!displayName().trim()">Join Call</button>
+            </div>
+        </div>
+        }
+        @default {
+        <div class="error-view">
+            <h1>Room Not Found</h1>
+            <p>This call room doesn't exist or has expired.</p>
+            <a routerLink="/" class="btn-back">Go back to login</a>
+        </div>
+        }
+    }
+    
+</main>

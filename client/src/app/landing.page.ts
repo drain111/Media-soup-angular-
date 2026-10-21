@@ -26,7 +26,7 @@ export class LandingPage {
   roomEmails = signal('');
   constructor() {
     this.auth.getProviders().subscribe((list) => this.providers.set(list));
-    if (this.isBrowser) this.auth.authCheck();
+    //if (this.isBrowser) this.auth.authCheck();
   }
   onRoomNameInput(event: Event) {
     this.roomName.set((event.target as HTMLInputElement).value);
