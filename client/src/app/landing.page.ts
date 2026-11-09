@@ -23,7 +23,7 @@ export class LandingPage {
   showCreateRoomModal = false;
   roomCode = signal<string | null>(null);
   roomName = signal('');
-  roomEmails = signal('');
+  roomloginKeys = signal('');
   constructor() {
     this.auth.getProviders().subscribe((list) => this.providers.set(list));
     //if (this.isBrowser) this.auth.authCheck();
@@ -32,21 +32,21 @@ export class LandingPage {
     this.roomName.set((event.target as HTMLInputElement).value);
   }
 
-  onRoomEmailsInput(event: Event) {
-    this.roomEmails.set((event.target as HTMLTextAreaElement).value);
+  onRoomloginKeysInput(event: Event) {
+    this.roomloginKeys.set((event.target as HTMLTextAreaElement).value);
   }
   async onGo(): Promise<void> {
     if (!this.roomName().trim()) return;
 
     const roomName = this.roomName();
-    const inviteEmails = this.roomEmails()
+    const loginKeys = this.roomloginKeys()
       .split(',')
       .map(e => e.trim())
       .filter(Boolean);
 
     try {
       const resp = await lastValueFrom(
-        this.http.post<{ code: string }>('/api/rooms', { roomName, inviteEmails }),
+        this.http.post<{ code: string }>('/api/rooms', { roomName, loginKeys }),
       );
       if (resp?.code) {
         this.roomCode.set(resp.code);

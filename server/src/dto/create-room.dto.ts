@@ -5,5 +5,5 @@ export class CreateRoomDto {
   roomName: string;
 
   @IsArray()
-  inviteEmails?: string[];
+  loginKeys?: string[];
 }

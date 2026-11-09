@@ -55,7 +55,7 @@ export class CustomAuthProvider implements AuthProvider {
       client_id: this.cfg.clientId,
       redirect_uri: this.cfg.redirectUri,
       response_type: 'code',
-      scope: 'openid email profile',
+      scope: 'openid login profile',
       state,
     });
     return `${authorization_endpoint}?${params}`;
@@ -85,15 +85,16 @@ export class CustomAuthProvider implements AuthProvider {
       issuer: d.issuer,
       audience: this.cfg.clientId,
     });
+    const loginKey = payload['email'] ?? payload['preferred_username'] ?? payload['sub'];
 
-    if (!payload.sub || typeof payload['email'] !== 'string') {
+    if (!payload.sub || typeof loginKey !== 'string') {
       throw new Error('Custom token missing sub or email claim');
     }
 
     return {
       provider: 'custom',
       subject: payload.sub,
-      email: payload['email'],
+      loginKey: loginKey,
       emailVerified: payload['email_verified'] === true,
       name: typeof payload['name'] === 'string' ? payload['name'] : undefined,
     };

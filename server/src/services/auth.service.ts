@@ -30,10 +30,10 @@ export class AuthService {
     try {
       user = await provider.handleCallback({ code });
     } catch (err) {
-      this.logger.warn(`Login failed for ${providerId}: ${err instanceof Error ? err.message : err}`);
+      this.logger.warn(`Login failed for ${providerId}: ${err instanceof Error ? err.message : String(err)}`);
       throw new UnauthorizedException('Login failed');
     }
-    if (!user.emailVerified) throw new ForbiddenException('Email not verified');
+    if (!user.emailVerified) throw new ForbiddenException('Your login info is not verified');
     return user;
   }
 }

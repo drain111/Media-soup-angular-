@@ -1,21 +1,16 @@
 
 export interface Identity {
   sub: string;
-  email: string;
+  loginKey: string;
   displayName: string;
   photoUrl?: string;
 }
 
-export interface VerifyResult extends Identity {
-  verified: true;
-}
 
-export interface UnverifiedResult {
-  verified: false;
-  reason: string;
-}
+export type AccessCheck = 
+  | { allowed: true;  reason: 'host' | 'invited'; roomName: string }
+  | { allowed: false; reason: 'unknown' | 'expired' | 'notInvited' };
 
-export type Verification = VerifyResult | UnverifiedResult;
 
 export interface Clock {
   now(): number;
@@ -26,10 +21,8 @@ export interface Clock {
 export interface SessionStore {
   create(sessionId: string, data: { code: string; hostParticipantId: string; expiresAt: number; roomName: string }, invites: string[], ttlSeconds: number): Promise<void>;
   get(code: string): Promise<{ sessionId: string; code: string; hostParticipantId: string; roomName: string; invites: Set<string>; expiresAt: number } | null> ;
-  updateInvites(code: string, emails: string[]): Promise<number>;
-  isMember(sessionId: string): Promise<boolean>;
-  hasInvite(participantId: string, code: string): Promise<boolean>;
-  scheduleExpiry(code: string, ttlMs: number, callback: () => void): void;
+  updateInvites(code: string, loginKeys: string[]): Promise<number>;
+  hasInvite(participantId: string, code: string): Promise<AccessCheck>;
 }
 
 export interface RoomSignal {
@@ -48,7 +41,7 @@ export interface MediaController {
 export interface Participant {
   sessionId: string;
   socketId: string;
-  email: string;
+  loginKey: string;
   displayName: string;
   isHost: boolean;
   joinedAt: number;

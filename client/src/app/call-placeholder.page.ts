@@ -1,9 +1,10 @@
 import { Component, ElementRef, OnDestroy, signal, viewChild } from '@angular/core';
-import { PLATFORM_ID, AfterViewInit, inject, effect } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { PLATFORM_ID, AfterViewInit, inject, effect, afterRenderEffect } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthProvidersService } from './services/auth-providers.service.js';
 import { CallAccessService, AccessState } from './services/call-access.service.js';
-import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser, SlicePipe, UpperCasePipe } from '@angular/common';
+import { CallWsService } from './services/call-ws.service.js';
 
 interface MediaDevice {
   deviceId: string;
@@ -13,21 +14,27 @@ interface MediaDevice {
 @Component({
   selector: 'app-call-placeholder',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, UpperCasePipe, SlicePipe],
   templateUrl: 'call-placeholder.page.html',
   styleUrl: 'call-placeholder.page.css'
 })
 export class CallPlaceholderPage implements AfterViewInit, OnDestroy {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private auth = inject(AuthProvidersService);
   private access = inject(CallAccessService);
+  private ws = inject(CallWsService);
+
   private isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
-  private initialDisplayNameSet = false; // just needs to be "have we set it yet", not the value itself
+  private initialDisplayNameSet = false;
   readonly previewVideo = viewChild<ElementRef<HTMLVideoElement>>('previewVideo');
+  /** The joined in-call video (only exists in the 'joined' branch). Non-required so it's null-safe before render. */
+  readonly selfVideo = viewChild<ElementRef<HTMLVideoElement>>('selfVideo');
   showSkeleton = signal(false);
   private skeletonTimer: ReturnType<typeof setTimeout> | null = null;
   accessState = this.access.state;
   roomName = this.access.roomName;
+  readonly roomCode = signal<string>('');
 
   cameras = signal<MediaDevice[]>([]);
   mics = signal<MediaDevice[]>([]);
@@ -46,6 +53,7 @@ export class CallPlaceholderPage implements AfterViewInit, OnDestroy {
 
   constructor() {
     const code = this.route.snapshot.queryParams['code'] as string ?? '';
+    this.roomCode.set(code);
     this.access.check(code);
     if (!this.isBrowser) return;
 
@@ -70,6 +78,15 @@ export class CallPlaceholderPage implements AfterViewInit, OnDestroy {
         this.startDeviceSelection();
       }
     });
+
+    // Attach the local stream to the in-call <video> once it exists in the DOM.
+    // afterRenderEffect runs AFTER the template has actually rendered 'joined',
+    // where the #selfVideo element is present — so this cannot throw before render
+    // the way a constructor effect() did. Re-runs on stream swap, camera toggle, unmount.
+    afterRenderEffect(() => {
+      if (!this.isBrowser) return;
+      this.attachSelfStream();
+    });
   }
 
   ngAfterViewInit(): void {
@@ -79,8 +96,6 @@ export class CallPlaceholderPage implements AfterViewInit, OnDestroy {
       this.initialDisplayNameSet = true;
       this.displayName.set(user.name);
     }
-
-    
   }
 
   private async startDeviceSelection(): Promise<void> {
@@ -142,6 +157,11 @@ export class CallPlaceholderPage implements AfterViewInit, OnDestroy {
       const data = new Uint8Array(this.analyser.frequencyBinCount);
       const tick = () => {
         if (!this.analyser) return;
+        if (!this.ws.micOn()) {
+          this.micVolumePercent.set(0);
+          this.animationFrameId = requestAnimationFrame(tick);
+          return;
+        }
         this.analyser.getByteFrequencyData(data);
         const avg = data.reduce((a: number, b: number) => a + b, 0) / data.length;
         this.micVolumePercent.set(Math.min(100, (avg / 128) * 100));
@@ -215,17 +235,64 @@ export class CallPlaceholderPage implements AfterViewInit, OnDestroy {
   onJoin(): void {
     const name = this.displayName().trim();
     if (!name) return;
-    console.log('[CallPlaceholder] Joining call as:', name);
+    void this.access.startJoin(this.roomCode(), name);
   }
 
-  ngOnDestroy(): void {
-    if (this.animationFrameId != null) {
-      cancelAnimationFrame(this.animationFrameId);
+  onLeave(): void {
+    this.ws.leaveRoom();
+    this.stopSelfStream();
+    this.router.navigate(['/']);
+  }
+
+  toggleMute(): void {
+    this.ws.micOn.update(v => !v);
+    if (!this.ws.micOn()) {
+      this.micVolumePercent.set(0);
     }
+    this.applyTrackState();
+  }
+
+  toggleCamera(): void {
+    this.ws.camOn.update(v => !v);
+    this.applyTrackState();
+  }
+
+  myId(): string {
+    return this.ws.myId();
+  }
+
+  private applyTrackState(): void {
+    const stream = this.localStream;
+    if (!stream) return;
+    for (const t of stream.getAudioTracks()) {
+      t.enabled = this.ws.micOn();
+    }
+    for (const t of stream.getVideoTracks()) {
+      t.enabled = this.ws.camOn();
+    }
+  }
+
+  private attachSelfStream(): void {
+    const el = this.selfVideo()?.nativeElement;
+    if (el) el.srcObject = this.localStream;
+  }
+
+  private stopSelfStream(): void {
     if (this.localStream) {
       this.localStream.getTracks().forEach(t => t.stop());
       this.localStream = null;
     }
+  }
+
+  ngOnDestroy(): void {
+    if (this.ws.state() !== 'disconnected') {
+      this.ws.leaveRoom();
+    }
+    if (this.animationFrameId != null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    this.stopSelfStream();
     if (this.skeletonTimer !== null) clearTimeout(this.skeletonTimer);
     this.audioContext?.close().catch(() => {});
   }

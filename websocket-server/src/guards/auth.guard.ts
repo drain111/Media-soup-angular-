@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { jwtVerify } from 'jose';
 import { Socket } from 'socket.io';
-import { SessionUser } from '../domain/sessionUser.js';
+import { SessionUser } from '../domain/session-user.js';
 const isProd = () => process.env['NODE_ENV'] === 'production';
 
 const logger = new Logger('AuthGuard');
@@ -19,12 +19,12 @@ export class AuthGuard {
   async verify(token: string): Promise<SessionUser | undefined> {
     try {
       const { payload } = await jwtVerify(token, this.key, { algorithms: ['HS256'] });
-      const email = payload['email'];
-      if (!payload.sub || typeof email !== 'string') return undefined;
+      const loginKey = payload['loginKey'];
+      if (!payload.sub || typeof loginKey !== 'string') return undefined;
       const name = payload['name'];
-      return { id: payload.sub, email, name: typeof name === 'string' ? name : undefined };
+      return { id: payload.sub, loginKey, name: typeof name === 'string' ? name : undefined };
     } catch (_e) {
-      logger.warn('JWT verification failed');
+      logger.warn('JWT verification failed ' + _e);
       return undefined;
     }
   }

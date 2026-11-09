@@ -1,19 +1,22 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { AuthProvidersService } from './auth-providers.service.js';
-import { Router } from '@angular/router';
+import { CallWsService } from './call-ws.service.js';
 export enum AccessState {
   /** Shown after auth loading finishes — stays until user is sure they're not allowed */
   Validating = 'validating',
+  ConnectingRoom = 'connectingRoom', // ws join in progress
   Allowed = 'allowed',
+  AllowedJoined = 'joined',   // ws connection succeeded
   NotLoggedIn = 'notLoggedIn',
   RoomNotFound = 'roomNotFound',
   NotInvited = 'notInvited',
+  Error = 'error',
 }
 @Injectable({ providedIn: 'root' })
 export class CallAccessService {
   private http = inject(HttpClient);
-  private router = inject(Router);
+  private callWs = inject(CallWsService);
   auth = inject(AuthProvidersService);
   readonly state = signal<AccessState>(AccessState.Validating); // neutral — never an error at init
   readonly roomName = signal<string | null>(null);
@@ -28,6 +31,11 @@ export class CallAccessService {
       const code = this._pendingCode;
       if (!code) return; // check() hasn't been called yet — leave state as Validating
       this._pendingCode = null;
+
+      // While we're in a joining/connecting phase, don't overwrite it.
+      const cur = this.state();
+      if (cur === AccessState.ConnectingRoom || cur === AccessState.AllowedJoined) return;
+
       // No user → show error directly, don't redirect (user could try again)
       const user = this.auth.user();
       if (!user) {
@@ -94,5 +102,16 @@ export class CallAccessService {
         }
       },
     });
+  }
+
+  async startJoin(code: string, displayName: string): Promise<void> {
+    this.state.set(AccessState.ConnectingRoom);
+    const success = await this.callWs.joinRoom(code, displayName);
+    if (success && this.auth.user()) {
+      this.state.set(AccessState.AllowedJoined);
+    } else {
+      const errState = this.callWs.errorMsg() ? AccessState.Error : AccessState.NotInvited;
+      this.state.set(errState);
+    }
   }
 }

@@ -1,7 +1,7 @@
 export interface AuthenticatedUser {
   provider: string;
   subject: string;
-  email: string;
+  loginKey: string;
   emailVerified: boolean;
   name?: string;
 }

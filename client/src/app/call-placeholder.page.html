@@ -17,7 +17,7 @@
         @case ('notInvited') {
         <div class="error-view">
             <h1>Not Invited</h1>
-            <p>You're not invited to this session. Please ask the host to invite your email address.</p>
+            <p>You're not invited to this session. Please ask the host to invite your user login name.</p>
             <a routerLink="/" class="btn-back">Go back to login</a>
         </div>
         }
@@ -125,6 +125,68 @@
             />
             <button class="btn-join" (click)="onJoin()" [disabled]="!displayName().trim()">Join Call</button>
             </div>
+        </div>
+        }
+        @case ('joined') {
+        <main class="in-call">
+            <div class="in-call-main">
+                <div class="self-tile">
+                    <video #selfVideo autoplay playsinline muted class="self-video"></video>
+                    @if (!ws.camOn()) {
+                        <div class="tile-cover">{{ (auth.user()?.name ?? '?') | slice: 0:1 | uppercase }}</div>
+                    }
+                    <span class="tile-name">{{ auth.user()?.name ?? '' }}</span>
+                </div>
+                <span class="connection-count">{{ ws.connected() }} {{ ws.connected() === 1 ? 'person' : 'people' }} connected</span>
+
+                @for (peer of ws.peers(); track peer.id) {
+                    @if (peer.id !== ws.myId()) {
+                        <div class="self-tile">
+                            <div class="tile-cover">{{ peer.name | slice: 0:1 | uppercase }}</div>
+                            <span class="tile-name">{{ peer.name }}</span>
+                        </div>
+                    }
+                }
+            </div>
+            <section class="conf-controls">
+                <button class="btn-control" [class.muted]="!ws.micOn()" (click)="toggleMute()" [attr.aria-pressed]="!ws.micOn()">
+                    <svg class="mic-icon" viewBox="0 0 24 24" fill="none" width="24" height="24">
+                        <path d="M12 1a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="#fff" stroke-width="1.5"/>
+                        <path d="M19 10v1a7 7 0 0 1-14 0v-1" stroke="#fff" stroke-width="1.5"/>
+                        <line x1="12" y1="19" x2="12" y2="23" stroke="#fff" stroke-width="1.5"/>
+                        @if (!ws.micOn()) {
+                            <line x1="3" y1="3" x2="21" y2="21" stroke="#f44336" stroke-width="2"/>
+                        }
+                    </svg>
+                </button>
+                <button class="btn-control" [class.muted]="!ws.camOn()" (click)="toggleCamera()">
+                    <svg class="cam-icon" viewBox="0 0 24 24" fill="none" width="24" height="24">
+                        <rect x="2" y="4" width="15" height="14" rx="2" stroke="#fff" stroke-width="1.5"/>
+                        <path d="M21 8l-4 4 4 4V8z" fill="#fff"/>
+                        @if (!ws.camOn()) {
+                            <line x1="3" y1="3" x2="21" y2="21" stroke="#f44336" stroke-width="2"/>
+                        }
+                    </svg>
+                </button>
+                <a routerLink="/" (click)="onLeave()" class="btn-control btn-leave">
+                    <svg viewBox="0 0 24 24" fill="none" width="24" height="24">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke="#fff" stroke-width="1.5"/>
+                    </svg>
+                </a>
+            </section>
+        </main>
+        }
+        @case ('error') {
+            <div class="error-view at-bottom">
+                <h1>Join Failed</h1>
+                <p>There was an error joining the room</p>
+                <a routerLink="/" class="btn-back btn-cancel-room">Cancel and leave</a>
+            </div>
+        }
+        @case ('connectingRoom') {
+        <div class="prep-container skeleton-container" style="max-width:420px">
+            <div class="skeleton-header"><span class="skeleton-line skeleton-title"></span></div>
+            <p style="text-align:center;color:#a0a0c0">Connecting to room…</p>
         </div>
         }
         @default {

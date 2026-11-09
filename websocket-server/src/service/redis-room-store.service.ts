@@ -1,10 +1,11 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { Redis } from 'ioredis';
 import { getRedisConfig, REDIS_NAMESPACE } from '../config/redis.config.js';
+import { AccessCheck } from '../domain/session-user.js';
 
 export const REDIS_SESSION_TTL_SECONDS = 8 * 60 * 60;
 const ROOM_HASH_KEY_PREFIX = `${REDIS_NAMESPACE}room:`;
-const SESSION_INDEX_PREFIX = 'session-index:';
+const SESSION_INDEX_PREFIX = `${REDIS_NAMESPACE}session-index:`;
 
 @Injectable()
 export class RedisRoomStore implements OnModuleInit, OnModuleDestroy {
@@ -23,8 +24,6 @@ export class RedisRoomStore implements OnModuleInit, OnModuleDestroy {
     });
     this.client.on('error', (err) => {
       this.logger.error(`Redis error: ${err.message}`, err.stack);
-        console.error('Full redis error:', err);
-        console.error('Full redis error:', config.port);
 
     });
   }
@@ -33,7 +32,8 @@ export class RedisRoomStore implements OnModuleInit, OnModuleDestroy {
     if (!this.client) return;
     try {
       await this.client.quit();
-    } catch (_err) {
+    } catch (err) {
+      this.logger.log(err)
       this.client.disconnect();
     }
   }
@@ -41,7 +41,7 @@ export class RedisRoomStore implements OnModuleInit, OnModuleDestroy {
   async create(
     sessionId: string,
     data: { code: string; hostParticipantId: string; expiresAt: number; roomName: string },
-    inviteIds: string[],
+    loginKeys: string[],
     ttlSeconds: number,
   ): Promise<void> {
     if (ttlSeconds <= 0) throw new Error('ttlSeconds must be positive');
@@ -55,7 +55,7 @@ export class RedisRoomStore implements OnModuleInit, OnModuleDestroy {
       hostParticipantId: data.hostParticipantId,
       expiresAt: String(data.expiresAt),
       roomName: data.roomName,
-      inviteIds: JSON.stringify(inviteIds),
+      loginKeys: JSON.stringify(loginKeys),
     });
     multi.set(indexKey, data.code, 'EX', ttlSeconds);
     multi.expire(key, ttlSeconds);
@@ -71,9 +71,9 @@ export class RedisRoomStore implements OnModuleInit, OnModuleDestroy {
     const fields = await this.client.hgetall(key);
     if (!fields || !fields.sessionId) return null;
 
-    let inviteIds: string[] = [];
-    if (fields.inviteIds) {
-      try { inviteIds = JSON.parse(fields.inviteIds); } catch { /* ignore */ }
+    let loginKeys: string[] = [];
+    if (fields.loginKeys) {
+      try { loginKeys = JSON.parse(fields.loginKeys); } catch { /* ignore */ }
     }
 
     return {
@@ -81,25 +81,29 @@ export class RedisRoomStore implements OnModuleInit, OnModuleDestroy {
       code: fields.code,
       hostParticipantId: fields.hostParticipantId,
       roomName: fields.roomName ?? '',
-      invites: new Set(inviteIds),
+      invites: new Set(loginKeys),
       expiresAt: Number(fields.expiresAt),
     };
   }
 
-  async hasInvite(participantId: string, code: string): Promise<boolean> {
+  async hasInvite(participantId: string, code: string): Promise<AccessCheck> {
     const room = await this.get(code);
-    if (!room) return false;
-    return room.invites.has(participantId);
+    if (!room) return { allowed: false, reason: 'unknown' };
+    //this one shouldn't trigger, but who knows, just in case. well, technically, now that we have it at 8 hours in the redis store I guess it will
+    if (room.expiresAt < Math.floor(Date.now() / 1000)) return { allowed: false, reason: 'expired' };
+    if (participantId === room.hostParticipantId) return { allowed: true,  reason: 'host',    roomName: room.roomName };
+    if (room.invites.has(participantId)) return { allowed: true,  reason: 'invited', roomName: room.roomName };
+    return { allowed: false, reason: 'notInvited' };
   }
 
-  async updateInvites(code: string, inviteIds: string[]): Promise<number> {
+  async updateInvites(code: string, loginKeys: string[]): Promise<number> {
     const key = `${ROOM_HASH_KEY_PREFIX}${code}`;
     const sessionId = await this.client.hget(key, 'sessionId');
     if (!sessionId) {
       throw new Error(`Room ${code} not found`);
     }
-    await this.client.hset(key, 'inviteIds', JSON.stringify(inviteIds));
-    return inviteIds.length;
+    await this.client.hset(key, 'loginKeys', JSON.stringify(loginKeys));
+    return loginKeys.length;
   }
 
   async removeRoom(code: string): Promise<void> {
@@ -111,16 +115,16 @@ export class RedisRoomStore implements OnModuleInit, OnModuleDestroy {
     await this.client.del(key);
   }
 
-  async getRoomBySession(sessionId: string): Promise<{ sessionId: string; code: string; hostParticipantId: string; roomName: string; inviteIds: string[]; expiresAt: number } | null> {
+  async getRoomBySession(sessionId: string): Promise<{ sessionId: string; code: string; hostParticipantId: string; roomName: string; loginKeys: string[]; expiresAt: number } | null> {
     const code = await this.client.get(`${SESSION_INDEX_PREFIX}${sessionId}`);
     if (!code) return null;
     const key = `${ROOM_HASH_KEY_PREFIX}${code}`;
     const fields = await this.client.hgetall(key);
     if (!fields || !fields.sessionId) return null;
 
-    let inviteIds: string[] = [];
-    if (fields.inviteIds) {
-      try { inviteIds = JSON.parse(fields.inviteIds); } catch { /* ignore */ }
+    let loginKeys: string[] = [];
+    if (fields.loginKeys) {
+      try { loginKeys = JSON.parse(fields.loginKeys); } catch { /* ignore */ }
     }
 
     return {
@@ -128,7 +132,7 @@ export class RedisRoomStore implements OnModuleInit, OnModuleDestroy {
       code: fields.code,
       hostParticipantId: fields.hostParticipantId,
       roomName: fields.roomName ?? '',
-      inviteIds,
+      loginKeys,
       expiresAt: Number(fields.expiresAt),
     };
   }

@@ -222,9 +222,9 @@ components:
   schemas:
     User:
       type: object
-      required: [email, name]
+      required: [loginKey, name]
       properties:
-        email:   { type: string, format: email }
+        loginKey:   { type: string }
         name:    { type: string }
         picture:
           type: string
@@ -244,19 +244,19 @@ components:
               description: Room expiry as epoch seconds
             invites:
               type: array
-              items: { type: string, format: email }
+              items: { type: string }
 
     CreateRoomRequest:
       type: object
-      required: [roomName, inviteEmails]
+      required: [roomName, inviteloginKeys]
       properties:
         roomName:
           type: string
           description: Display name for the room
-        inviteEmails:
+        inviteloginKeys:
           type: array
-          items: { type: string, format: email }
-          description: Email whitelist of allowed participants
+          items: { type: string }
+          description: loginKeys whitelist of allowed participants
 
     CreateRoomResponse:
       allOf:

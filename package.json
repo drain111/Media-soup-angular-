@@ -9,7 +9,9 @@
   "scripts": {
     "dev:server": "npm run dev -w server",
     "dev:client": "npm run start -w client",
-    "dev": "concurrently -k -n \"CLIENT,SERVER\" -c \"blue,green\" \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:ws": "npm run dev -w websocket-server",
+
+    "dev": "concurrently -k -n \"CLIENT,SERVER, WS\" -c \"blue,green,red\" \"npm run dev:client\" \"npm run dev:server\" \"npm run dev:ws\"",
     "build:client": "npm run build -w client",
     "build:server": "npm run build -w server",
     "build": "npm run build:client && npm run build:server",

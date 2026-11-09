@@ -24,7 +24,7 @@ export class SessionService {
   }
 
   create(user: AuthenticatedUser): Promise<string> {
-    return new SignJWT({ email: user.email.toLowerCase(), name: user.name })
+    return new SignJWT({ loginKey: user.loginKey.toLowerCase(), name: user.name })
       .setProtectedHeader({ alg: 'HS256' })
       .setSubject(`${user.provider}:${user.subject}`)
       .setIssuedAt()
@@ -35,10 +35,10 @@ export class SessionService {
   async verify(token: string): Promise<SessionUser | null> {
     try {
       const { payload } = await jwtVerify(token, this.key, { algorithms: ['HS256'] });
-      const email = payload['email'];
-      if (!payload.sub || typeof email !== 'string') return null;
+      const loginKey = payload['loginKey'];
+      if (!payload.sub || typeof loginKey !== 'string') return null;
       const name = payload['name'];
-      return { id: payload.sub, email, name: typeof name === 'string' ? name : undefined };
+      return { id: payload.sub, loginKey, name: typeof name === 'string' ? name : undefined, token:token };
     } catch {
       return null;
     }

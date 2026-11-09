@@ -59,10 +59,11 @@ describe('RedisStore', () => {
 
     await store.create(sessionId, { code, hostParticipantId: 'p1', expiresAt, roomName: 'X' }, [], REDIS_SESSION_TTL_SECONDS);
 
-    const exists = await store.isMember(sessionId);
-    expect(exists).toBe(true);
+    const namespace = process.env['REDIS_NAMESPACE'] ? `${process.env['REDIS_NAMESPACE']}:` : '';
+    const indexKey = `${namespace}session-index:${sessionId}`;
 
-    const notExists = await store.isMember('fake-session-999');
-    expect(notExists).toBe(false);
+    expect(await redis.exists(indexKey)).toBe(1);
+    expect(await redis.get(indexKey)).toBe(code);
+    expect(await redis.exists(`${namespace}session-index:fake-session-999`)).toBe(0);
   });
 });

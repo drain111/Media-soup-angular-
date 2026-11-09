@@ -1,6 +1,6 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException, BadRequestException, NotFoundException, GoneException } from '@nestjs/common';
 import { RedisRoomStore } from '../service/redis-room-store.service.js';
-import { SessionUser } from '../domain/sessionUser.js';
+import { SessionUser } from '../domain/session-user.js';
 
 @Injectable()
 export class RedisGuard implements CanActivate {
@@ -14,19 +14,15 @@ export class RedisGuard implements CanActivate {
     if (typeof roomCode !== 'string' || !roomCode) {
       throw new BadRequestException('Missing room code');
     }
-
-    const room = await this.redisStore.get(roomCode);
-    if (!room) throw new ForbiddenException('Room not found');
-    //this shouldn't triger, but who knows, jsut in case
-    if (Date.now() / 1000 > room.expiresAt) throw new ForbiddenException('Room expired');
-
     const user = socket.data.user as SessionUser;
     if (!user) throw new ForbiddenException('Not authenticated');
 
-    const isHost = user.id === room.hostParticipantId;
-    const isInvited = room.invites.has(user.id);
-
-    if (!isHost && !isInvited) throw new ForbiddenException('Not allowed in this room');
+    const access = await this.redisStore.hasInvite(socket.data.user.loginKey, roomCode)
+    if (!access.allowed) {
+      if (access.reason === 'unknown')    throw new NotFoundException('Room not found');
+      if (access.reason === 'expired')    throw new GoneException('Room expired'); // 410
+      throw new ForbiddenException('Not invited to this session');
+    }
     return true;
   }
 }

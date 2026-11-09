@@ -1,4 +1,4 @@
-import { Controller, Delete, Get, HttpCode, HttpStatus, Res, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, HttpCode, HttpStatus, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import type { SessionUser } from '../../domain/session-user.js';
 import { CurrentUser } from '../../guards/current-user.decorator.js';
@@ -14,6 +14,14 @@ export class SessionController {
   @UseGuards(SessionGuard)
   current(@CurrentUser() user: SessionUser): SessionUser {
     return user;
+  }
+
+  /** Get the session token (for WebSocket JWT auth). 401 when not logged in. */
+  @Get('token')
+  @UseGuards(SessionGuard)
+  token(@CurrentUser() user: SessionUser): { token: string } {
+    if (!user.token) throw new UnauthorizedException();
+    return { token: user.token };
   }
 
   /** Log out. */

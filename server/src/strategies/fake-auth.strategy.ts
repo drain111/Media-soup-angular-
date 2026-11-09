@@ -1,7 +1,7 @@
 import type { AuthenticatedUser, AuthProvider } from '../domain/auth-provider.js';
 
 const defaultUsers: Record<string, AuthenticatedUser> = {
-  alice: { provider: 'fake', subject: 'alice-sub', email: 'alice@example.com', emailVerified: true, name: 'Alice' },
+  alice: { provider: 'fake', subject: 'alice-sub', loginKey: 'alice542', emailVerified: true, name: 'Alice' },
 };
 
 /** Dev-only provider: "code" is just a user key. Never registered in production. */

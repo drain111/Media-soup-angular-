@@ -6,7 +6,7 @@
   <main class="landing">
     <!-- Top-right user button -->
     <div class="user-area" #dropdownContainer>
-      <button class="user-btn" (click)="showDropdown = !showDropdown" [attr.title]="auth.user()?.email">
+      <button class="user-btn" (click)="showDropdown = !showDropdown" [attr.title]="auth.user()?.loginKey">
         {{ auth.initials(auth.user()?.name) }}
       </button>
 
@@ -14,7 +14,7 @@
         <div class="dropdown" #menuEl>
           <div class="dropdown-user-info">
             <div class="dropdown-avatar-small">{{ auth.initials(auth.user()?.name) }}</div>
-            <span class="dropdown-email">{{ auth.user()!.email }}</span>
+            <span class="dropdown-email">{{ auth.user()!.loginKey }}</span>
           </div>
           <button class="dropdown-btn-logout" (click)="onLogout()">Logout</button>
         </div>
@@ -40,12 +40,12 @@
               <input id="room-name" type="text" placeholder="My room" (input)="onRoomNameInput($event)" />
             </div>
             <div class="form-field">
-              <label for="room-emails">Emails to allow</label>
+              <label for="room-emails">User login to allow</label>
               <textarea
                 id="room-emails"
                 placeholder="john@example.com, jane@example.com"
                 rows="4"
-                (input)="onRoomEmailsInput($event)"
+                (input)="onRoomloginKeysInput($event)"
               ></textarea>
             </div>
             <button type="button" class="cta-btn btn-go" (click)="onGo()" [disabled]="!roomName().trim()">Go</button>
@@ -60,7 +60,7 @@
       <h1>🎥 MediaSource VideoChat</h1>
 
       <p class="subtitle">
-        This is a real-time videochat app using MediaSource — right now, log in with any available provider to create a room and invite participants by their emails. Everyone joins by authenticating, and each session auto-expires after <strong>1 hour</strong>. The session begins the moment the user creates the room with the emails.
+        This is a real-time videochat app using MediaSource — right now, log in with any available provider to create a room and invite participants by their user logins/emails. Everyone joins by authenticating, and each session auto-expires after <strong>1 hour</strong>. The session begins the moment the user creates the room with the user logins/emails.
       </p>
 
       <div class="login-buttons">

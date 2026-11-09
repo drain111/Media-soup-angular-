@@ -1,4 +1,4 @@
-import { Body, Controller, HttpStatus, Post, Get, UseGuards, Logger, Param } from '@nestjs/common';
+import { Body, Controller, Post, Get, UseGuards, Logger, Param, GoneException, ServiceUnavailableException } from '@nestjs/common';
 import { ClassSerializerInterceptor, UseInterceptors } from '@nestjs/common';
 import { generateRoomCode } from '../../utils/utils.js';
 import { REDIS_SESSION_TTL_SECONDS, RedisSessionStore } from '../../services/redis-store.service.js';
@@ -21,6 +21,8 @@ export class RoomController {
   @UseGuards(SessionGuard)
   async createRoom(@CurrentUser() user: SessionUser, @Body() dto: CreateRoomDto): Promise<{ code: string }> {
     let code: string | undefined;
+    
+
     for (let attemptNum = 0; attemptNum < CREATE_ROOM_RETRIES; attemptNum++) {
       code = generateRoomCode();
       const existing = await this.redis.get(code);
@@ -28,14 +30,14 @@ export class RoomController {
       code = undefined; // collision — retry
     }
 
-    if (!code) throw new Error('Could not create room after ' + CREATE_ROOM_RETRIES + ' tries');
+    if (!code) throw new ServiceUnavailableException('Could not create room after ' + CREATE_ROOM_RETRIES + ' tries');
 
-    const sessionId = `${user.id}@${Date.now()}`;
+    const sessionId = `${user.id}@${crypto.randomUUID()}`;
     const expiresAt = Math.floor(Date.now() / 1000) + REDIS_SESSION_TTL_SECONDS;
     await this.redis.create(
       sessionId,
-      { code, hostParticipantId: user.id, expiresAt, roomName: dto.roomName },
-      dto.inviteEmails ?? [],
+      { code, hostParticipantId: user.loginKey, expiresAt, roomName: dto.roomName },
+      dto.loginKeys ?? [],
       REDIS_SESSION_TTL_SECONDS,
     );
 
@@ -48,20 +50,14 @@ export class RoomController {
     @Param('code') code: string,
     @CurrentUser() user: SessionUser,
   ): Promise<{ allowed: boolean; roomName?: string }> {
-    const room = await this.redis.get(code);
-    if (!room || room.expiresAt < Math.floor(Date.now() / 1000)) {
-      throw new NotFoundException('Room not found or expired');
-    }
+  const access = await this.redis.hasInvite(user.loginKey, code);
 
-    // Host check
-    if (user.id === room.hostParticipantId) return { allowed: true, roomName: room.roomName };
 
-    // Invite check
-    const isInvited = room.invites.has(user.email);
-    if (!isInvited) {
-      throw new ForbiddenException('Not invited to this session');
-    }
-
-    return { allowed: true, roomName: room.roomName };
+  if (!access.allowed) {
+    if (access.reason === 'unknown')    throw new NotFoundException('Room not found');
+    if (access.reason === 'expired')    throw new GoneException('Room expired'); // 410
+    throw new ForbiddenException('Not invited to this session');
+  }
+  return { allowed: true, roomName: access.roomName };
   }
 }

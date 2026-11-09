@@ -47,7 +47,7 @@ describe('login', () => {
     expect(sid).toBeTruthy();
 
     const me = await http.get('/api/session').set('Cookie', `sid=${sid}`).expect(200);
-    expect(me.body).toMatchObject({ email: 'alice@example.com', name: 'Alice' });
+    expect(me.body).toMatchObject({ loginKey: 'alice', name: 'Alice' });
 
     await http.delete('/api/session').set('Cookie', `sid=${sid}`).expect(204);
   });

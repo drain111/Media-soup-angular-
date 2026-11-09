@@ -1,13 +1,13 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { Redis } from 'ioredis';
-import { SessionStore } from '../domain/ports.js';
+import { AccessCheck, SessionStore } from '../domain/ports.js';
 import { parseNonNegativeInt } from '../utils/utils.js';
 
 //nah new note, let's leave it like this until everythign is implemented. Then we are cheanging into redisom in case I leave this forever getting dust in my github and i want to come back in the future, that phrase above is clearer to understand
 export const REDIS_SESSION_TTL_SECONDS = 8 * 60 * 60;
 const NAMESPACE = process.env['REDIS_NAMESPACE'] ? `${process.env['REDIS_NAMESPACE']}:` : '';
 const ROOM_HASH_KEY_PREFIX = `${NAMESPACE}room:`;
-const SESSION_INDEX_PREFIX = 'session-index:';
+const SESSION_INDEX_PREFIX = `${NAMESPACE}session-index:`;
 
 @Injectable()
 export class RedisSessionStore implements SessionStore, OnModuleInit, OnModuleDestroy {
@@ -39,7 +39,7 @@ export class RedisSessionStore implements SessionStore, OnModuleInit, OnModuleDe
     try {
       await this.client.quit();
     } catch(err) {
-        this.logger.warn(`Redis quit() failed, forcing disconnect: ${err instanceof Error ? err.message : err}`);
+        this.logger.warn(`Redis quit() failed, forcing disconnect: ${err instanceof Error ? err.message : String(err)}`);
       this.client.disconnect();
     }
   }
@@ -63,7 +63,7 @@ export class RedisSessionStore implements SessionStore, OnModuleInit, OnModuleDe
       hostParticipantId: data.hostParticipantId,
       expiresAt: String(data.expiresAt),
       roomName: data.roomName,
-      inviteIds: JSON.stringify(invites),
+      loginKeys: JSON.stringify(invites),
     });
     multi.set(indexKey, data.code, 'EX', ttlSeconds); // same TTL, kept in sync
     multi.expire(key, ttlSeconds);
@@ -78,43 +78,38 @@ export class RedisSessionStore implements SessionStore, OnModuleInit, OnModuleDe
     const key = `${ROOM_HASH_KEY_PREFIX}${code}`;
     const fields = await this.client.hgetall(key);
     if (!fields || !fields.sessionId) return null;
-    let inviteIds: string[] = [];
-    if (fields.inviteIds) {
-      try { inviteIds = JSON.parse(fields.inviteIds); } catch { /* ignore */ }
+    let loginKeys: string[] = [];
+    if (fields.loginKeys) {
+      try { loginKeys = JSON.parse(fields.loginKeys); } catch { /* ignore */ }
     }
     return {
       sessionId: fields.sessionId,
       code: fields.code,
       hostParticipantId: fields.hostParticipantId,
       roomName: fields.roomName ?? '',
-      invites: new Set(inviteIds),
+      invites: new Set(loginKeys),
       expiresAt: Number(fields.expiresAt),
     };
   }
 
-  async updateInvites(code: string, inviteIds: string[]): Promise<number> {
+  async updateInvites(code: string, loginKeys: string[]): Promise<number> {
     const key = `${ROOM_HASH_KEY_PREFIX}${code}`;
     const sessionId = await this.client.hget(key, 'sessionId');
     if (!sessionId) {
       throw new Error(`Room ${code} not found`);
     }
-    await this.client.hset(key, 'inviteIds', JSON.stringify(inviteIds));
-    return inviteIds.length;
+    await this.client.hset(key, 'loginKeys', JSON.stringify(loginKeys));
+    return loginKeys.length;
   }
 
-  async isMember(sessionId: string): Promise<boolean> {
-    const exists = await this.client.exists(`${SESSION_INDEX_PREFIX}${sessionId}`);
-    return exists === 1;
-  }
-
-  async hasInvite(participantId: string, code: string): Promise<boolean> {
+  async hasInvite(participantId: string, code: string): Promise<AccessCheck> {
     const room = await this.get(code);
-    if (!room) return false;
-    return room.invites.has(participantId);
+    if (!room) return { allowed: false, reason: 'unknown' };
+    if (room.expiresAt < Math.floor(Date.now() / 1000)) return { allowed: false, reason: 'expired' };
+    if (participantId === room.hostParticipantId) return { allowed: true,  reason: 'host',    roomName: room.roomName };
+    if (room.invites.has(participantId)) return { allowed: true,  reason: 'invited', roomName: room.roomName };
+    return { allowed: false, reason: 'notInvited' };
   }
 
-  scheduleExpiry(): void {
-    // TTL is managed by Redis expire() in create — this method is no-op.
-  }
   
 }

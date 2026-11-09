@@ -3,7 +3,6 @@ import { Test } from '@nestjs/testing';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { SignJWT } from 'jose';
 import { io, Socket } from 'socket.io-client';
-import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
 import { AppModule } from '../src/app.module.js';
 import { RedisRoomStore } from '../src/service/redis-room-store.service.js';
 import type { INestApplication } from '@nestjs/common';
@@ -12,9 +11,9 @@ const SESSION_SECRET = process.env['SESSION_SECRET'] || 'dev-only-secret-change-
 const PORT = 6380;
 const WS_URL = `http://127.0.0.1:${PORT}`;
 
-async function signToken(payload: { sub: string; email: string; name?: string }): Promise<string> {
+async function signToken(payload: { sub: string; loginKey: string; name?: string }): Promise<string> {
   const key = new TextEncoder().encode(SESSION_SECRET);
-  return new SignJWT({ email: payload.email, name: payload.name })
+  return new SignJWT({ loginKey: payload.loginKey, name: payload.name })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(payload.sub)
     .setIssuedAt()
@@ -73,7 +72,7 @@ describe('AppGateway (e2e)', () => {
   });
 
   it('lets the host join and broadcasts to the room', async () => {
-    const token = await signToken({ sub: HOST_ID, email: 'host@example.com', name: 'Host User' });
+    const token = await signToken({ sub: HOST_ID, loginKey: 'host@example.com', name: 'Host User' });
     const socket = await connectClient({ token });
 
     const joined = new Promise<{ id: string; name: string }>((resolve) => {
@@ -90,7 +89,7 @@ describe('AppGateway (e2e)', () => {
   });
 
   it('lets an invited (non-host) user join', async () => {
-    const token = await signToken({ sub: INVITED_ID, email: 'invited@example.com', name: 'Invited User' });
+    const token = await signToken({ sub: INVITED_ID, loginKey: 'invited@example.com', name: 'Invited User' });
     const socket = await connectClient({ token });
 
     const joined = new Promise<{ id: string; name: string }>((resolve) => {
@@ -114,7 +113,7 @@ describe('AppGateway (e2e)', () => {
   });
 
   it('rejects an authenticated but uninvited user at the room-join step', async () => {
-    const token = await signToken({ sub: STRANGER_ID, email: 'stranger@example.com', name: 'Stranger' });
+    const token = await signToken({ sub: STRANGER_ID, loginKey: 'stranger@example.com', name: 'Stranger' });
     const socket = await connectClient({ token }); // connection itself succeeds — auth passed
 
     const errorOrJoin = await new Promise<{ event: string; data: unknown }>((resolve) => {

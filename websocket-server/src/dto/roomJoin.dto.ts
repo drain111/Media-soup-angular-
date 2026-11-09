@@ -12,8 +12,8 @@ export class RoomJoinData {
     name:string;
 
     
-  constructor(user : string, email: string) {
+  constructor(user : string, name: string) {
     this.id = user;
-    this.name = email;
+    this.name = name;
   }
 }

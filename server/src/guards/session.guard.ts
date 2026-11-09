@@ -15,6 +15,7 @@ export class SessionGuard implements CanActivate {
     const user = typeof token === 'string' ? await this.session.verify(token) : null;
     if (!user) throw new UnauthorizedException('Not authenticated');
     req.user = user;
+
     return true;
   }
 }

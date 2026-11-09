@@ -9,7 +9,7 @@ const PROVIDERS_KEY = makeStateKey<AuthProviderInfo[]>('auth-providers');
 
 export interface SessionUser {
   id?: string;
-  email: string;
+  loginKey: string;
   name?: string;
 }
 

@@ -58,7 +58,7 @@ constructor(private readonly cfg: { clientId: string; clientSecret: string; redi
     return {
       provider: 'google',
       subject: payload.sub,
-      email: payload['email'],
+      loginKey: payload['email'],
       emailVerified: payload['email_verified'] === true,
       name: typeof payload['name'] === 'string' ? payload['name'] : undefined,
     };

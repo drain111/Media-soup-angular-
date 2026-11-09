@@ -35,12 +35,13 @@ export function createAuthProviders(env: NodeJS.ProcessEnv = process.env): Reado
 
   const {AUTH_PROVIDERS} = env;
   
-  if (process.env['NODE_ENV'] !== 'production') {
+  if (env['NODE_ENV'] !== 'production') {
     providers.set('fake', new FakeAuthProvider());
   }
 
   if (AUTH_PROVIDERS) {
-    AUTH_PROVIDERS.split(',').map((p: string) => p.trim().toLowerCase()).forEach((provider: string) => {
+    AUTH_PROVIDERS.split(',').forEach((p: string) => {
+      let provider = p.trim().toLowerCase()
       if(!provider) return;
       const fn = providerFunctions[provider];
       if(fn) {
